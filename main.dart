@@ -44,7 +44,7 @@ class DatabaseHelper {
       )
     ''');
     
-    // 🔥 OPTIMIZATION 1: สร้าง Index ที่วันที่ เพื่อให้ค้นหาข้อมูลเร็วขึ้น
+    // OPTIMIZATION
     await db.execute('CREATE INDEX index_date ON transactions(date)');
 
     await db.execute('''
@@ -150,12 +150,12 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with SingleTicker
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("ยืนยันการลบ"), // 🔥 const
-        content: const Text("คุณต้องการลบรายการนี้ใช่หรือไม่?"), // 🔥 const
+        title: const Text("ยืนยันการลบ"), 
+        content: const Text("คุณต้องการลบรายการนี้ใช่หรือไม่?"), 
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text("ยกเลิก", style: TextStyle(color: Colors.grey)), // 🔥 const
+            child: const Text("ยกเลิก", style: TextStyle(color: Colors.grey)), 
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -166,7 +166,7 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with SingleTicker
                 _refreshData();
               }
             },
-            child: const Text("ลบ", style: TextStyle(color: Colors.white)), // 🔥 const
+            child: const Text("ลบ", style: TextStyle(color: Colors.white)), 
           ),
         ],
       ),
@@ -195,13 +195,13 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with SingleTicker
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text('My Wallet', style: TextStyle(fontWeight: FontWeight.bold)), // 🔥 const
+        title: const Text('My Wallet', style: TextStyle(fontWeight: FontWeight.bold)), 
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.calendar_month), // 🔥 const
+            icon: const Icon(Icons.calendar_month), 
             onPressed: () => _selectMonth(context),
           ),
         ],
@@ -209,7 +209,7 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with SingleTicker
       body: Column(
         children: [
           Container(
-            padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20, top: 10), // 🔥 const
+            padding: const EdgeInsets.only(left: 20, right: 20, bottom: 20, top: 10), 
             decoration: const BoxDecoration(
               color: Colors.indigo,
               borderRadius: BorderRadius.only(
@@ -221,23 +221,23 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with SingleTicker
               children: [
                 Text(
                   DateFormat('MMMM yyyy').format(selectedDate),
-                  style: const TextStyle(color: Colors.white70, fontSize: 16), // 🔥 const
+                  style: const TextStyle(color: Colors.white70, fontSize: 16), 
                 ),
-                const SizedBox(height: 5), // 🔥 const
+                const SizedBox(height: 5), 
                 Text(
                   "฿${(_totalIncome - _totalExpense).toStringAsFixed(2)}",
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 36,
                     fontWeight: FontWeight.bold,
-                  ), // 🔥 const
+                  ), 
                 ),
-                const Text("ยอดคงเหลือสุทธิ", style: TextStyle(color: Colors.white70)), // 🔥 const
-                const SizedBox(height: 20), // 🔥 const
+                const Text("ยอดคงเหลือสุทธิ", style: TextStyle(color: Colors.white70)), 
+                const SizedBox(height: 20), 
                 Row(
                   children: [
                     Expanded(child: _buildSummaryBox('รายรับ', _totalIncome, Colors.greenAccent)),
-                    const SizedBox(width: 15), // 🔥 const
+                    const SizedBox(width: 15), 
                     Expanded(child: _buildSummaryBox('รายจ่าย', _totalExpense, Colors.orangeAccent)),
                   ],
                 ),
@@ -245,7 +245,7 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with SingleTicker
             ),
           ),
 
-          const SizedBox(height: 10), // 🔥 const
+          const SizedBox(height: 10), 
 
           Container(
             color: Colors.white,
@@ -255,8 +255,8 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with SingleTicker
               unselectedLabelColor: Colors.grey,
               indicatorColor: Colors.indigo,
               tabs: const [
-                Tab(text: "กราฟรายจ่าย"), // 🔥 const
-                Tab(text: "กราฟรายรับ"), // 🔥 const
+                Tab(text: "กราฟรายจ่าย"), 
+                Tab(text: "กราฟรายรับ"), 
               ],
             ),
           ),
@@ -273,18 +273,18 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with SingleTicker
           ),
 
           const Padding(
-            padding: EdgeInsets.fromLTRB(20, 10, 20, 5), // 🔥 const
+            padding: EdgeInsets.fromLTRB(20, 10, 20, 5), 
             child: Align(
               alignment: Alignment.centerLeft, 
-              child: Text("รายการล่าสุด", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)) // 🔥 const
+              child: Text("รายการล่าสุด", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)) 
             ),
           ),
 
           Expanded(
             child: _transactions.isEmpty 
-            ? const Center(child: Text("ยังไม่มีรายการในเดือนนี้", style: TextStyle(color: Colors.grey))) // 🔥 const
+            ? const Center(child: Text("ยังไม่มีรายการในเดือนนี้", style: TextStyle(color: Colors.grey))) 
             : ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16), // 🔥 const
+              padding: const EdgeInsets.symmetric(horizontal: 16), 
               itemCount: _transactions.length,
               itemBuilder: (context, index) {
                 final item = _transactions[index];
@@ -294,21 +294,21 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with SingleTicker
                   key: Key(item['id'].toString()),
                   direction: DismissDirection.endToStart,
                   background: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 6), // 🔥 const
+                    margin: const EdgeInsets.symmetric(vertical: 6), 
                     decoration: BoxDecoration(color: Colors.red.shade400, borderRadius: BorderRadius.circular(12)),
                     alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.only(right: 20), // 🔥 const
-                    child: const Icon(Icons.delete, color: Colors.white), // 🔥 const
+                    padding: const EdgeInsets.only(right: 20), 
+                    child: const Icon(Icons.delete, color: Colors.white), 
                   ),
                   confirmDismiss: (direction) async {
                     return await showDialog(
                       context: context,
                       builder: (ctx) => AlertDialog(
-                        title: const Text("ยืนยันการลบ"), // 🔥 const
-                        content: const Text("คุณต้องการลบรายการนี้ใช่หรือไม่?"), // 🔥 const
+                        title: const Text("ยืนยันการลบ"), 
+                        content: const Text("คุณต้องการลบรายการนี้ใช่หรือไม่?"), 
                         actions: [
-                          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text("ยกเลิก")), // 🔥 const
-                          TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text("ลบ", style: TextStyle(color: Colors.red))), // 🔥 const
+                          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text("ยกเลิก")), 
+                          TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text("ลบ", style: TextStyle(color: Colors.red))), 
                         ],
                       ),
                     );
@@ -320,11 +320,11 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with SingleTicker
                   child: Card(
                     elevation: 2,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    margin: const EdgeInsets.symmetric(vertical: 6), // 🔥 const
+                    margin: const EdgeInsets.symmetric(vertical: 6), 
                     child: ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), // 🔥 const
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), 
                       leading: Container(
-                        padding: const EdgeInsets.all(10), // 🔥 const
+                        padding: const EdgeInsets.all(10), 
                         decoration: BoxDecoration(
                           color: isIncome ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(10),
@@ -334,10 +334,10 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with SingleTicker
                           color: isIncome ? Colors.green : Colors.orange,
                         ),
                       ),
-                      title: Text(item['category'], style: const TextStyle(fontWeight: FontWeight.bold)), // 🔥 const
+                      title: Text(item['category'], style: const TextStyle(fontWeight: FontWeight.bold)), 
                       subtitle: Text(
                         "${item['date']} ${item['note'] != '' ? '• ${item['note']}' : ''}",
-                        style: const TextStyle(fontSize: 12), // 🔥 const
+                        style: const TextStyle(fontSize: 12), 
                       ),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -350,12 +350,12 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with SingleTicker
                               fontSize: 16,
                             ),
                           ),
-                          const SizedBox(width: 8), // 🔥 const
+                          const SizedBox(width: 8), 
                           IconButton(
-                            icon: const Icon(Icons.delete_outline, color: Colors.grey), // 🔥 const
+                            icon: const Icon(Icons.delete_outline, color: Colors.grey), 
                             onPressed: () => _confirmDelete(item['id']),
                             padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(), // 🔥 const
+                            constraints: const BoxConstraints(), 
                             tooltip: "ลบรายการ",
                           ),
                         ],
@@ -371,15 +371,15 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with SingleTicker
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddTransactionModal(context),
         backgroundColor: Colors.indigo,
-        icon: const Icon(Icons.add), // 🔥 const
-        label: const Text("เพิ่มรายการ"), // 🔥 const
+        icon: const Icon(Icons.add), 
+        label: const Text("เพิ่มรายการ"), 
       ),
     );
   }
 
   Widget _buildSummaryBox(String title, double amount, Color color) {
     return Container(
-      padding: const EdgeInsets.all(12), // 🔥 const
+      padding: const EdgeInsets.all(12), 
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.2),
         borderRadius: BorderRadius.circular(15),
@@ -387,8 +387,8 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with SingleTicker
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(color: Colors.white70, fontSize: 12)), // 🔥 const
-          const SizedBox(height: 4), // 🔥 const
+          Text(title, style: const TextStyle(color: Colors.white70, fontSize: 12)), 
+          const SizedBox(height: 4), 
           Text(
             "฿${amount.toStringAsFixed(0)}",
             style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 18),
@@ -402,7 +402,7 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with SingleTicker
     List<Map<String, dynamic>> filteredData = _transactions.where((i) => i['type'] == type).toList();
     
     if (filteredData.isEmpty) {
-      return Center(child: Text("ไม่มีข้อมูล$type", style: const TextStyle(color: Colors.grey))); // 🔥 const
+      return Center(child: Text("ไม่มีข้อมูล$type", style: const TextStyle(color: Colors.grey))); 
     }
 
     Map<String, double> dataMap = {};
@@ -422,7 +422,7 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with SingleTicker
             value: e.value,
             title: '${e.key}\n${e.value.toStringAsFixed(0)}',
             radius: 60,
-            titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white), // 🔥 const
+            titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white), 
             titlePositionPercentageOffset: 0.55,
           );
         }).toList(),
@@ -489,11 +489,11 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
         title: Text("เพิ่มหมวดหมู่ ($_type)"),
         content: TextField(
           controller: newCatController,
-          decoration: const InputDecoration(hintText: "ชื่อหมวดหมู่ใหม่ เช่น 'ค่าเน็ต'"), // 🔥 const
+          decoration: const InputDecoration(hintText: "ชื่อหมวดหมู่ใหม่ เช่น 'ค่าเน็ต'"), 
           autofocus: true,
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("ยกเลิก")), // 🔥 const
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("ยกเลิก")), 
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo, foregroundColor: Colors.white),
             onPressed: () async {
@@ -508,7 +508,7 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
                 }
               }
             },
-            child: const Text("บันทึก"), // 🔥 const
+            child: const Text("บันทึก"), 
           )
         ],
       ),
@@ -533,12 +533,12 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
                 decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
               ),
             ),
-            const SizedBox(height: 20), // 🔥 const
-            const Text("เพิ่มรายการใหม่", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)), // 🔥 const
-            const SizedBox(height: 20), // 🔥 const
+            const SizedBox(height: 20), 
+            const Text("เพิ่มรายการใหม่", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)), 
+            const SizedBox(height: 20), 
             
             Container(
-              padding: const EdgeInsets.all(4), // 🔥 const
+              padding: const EdgeInsets.all(4), 
               decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(15)),
               child: Row(
                 children: [
@@ -547,7 +547,7 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
                 ],
               ),
             ),
-            const SizedBox(height: 15), // 🔥 const
+            const SizedBox(height: 15), 
 
             Row(
               children: [
@@ -560,37 +560,37 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
                     decoration: InputDecoration(
                       labelText: "หมวดหมู่",
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      prefixIcon: const Icon(Icons.category_outlined), // 🔥 const
+                      prefixIcon: const Icon(Icons.category_outlined), 
                     ),
                   ),
                 ),
-                const SizedBox(width: 10), // 🔥 const
+                const SizedBox(width: 10), 
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.indigo.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: IconButton(
-                    icon: const Icon(Icons.add, color: Colors.indigo), // 🔥 const
+                    icon: const Icon(Icons.add, color: Colors.indigo), 
                     onPressed: () => _showAddCategoryDialog(context),
                     tooltip: "เพิ่มหมวดหมู่",
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 15), // 🔥 const
+            const SizedBox(height: 15), 
 
             TextField(
               controller: _amountController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold), // 🔥 const
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold), 
               decoration: InputDecoration(
                 labelText: "จำนวนเงิน (บาท)",
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                prefixIcon: const Icon(Icons.attach_money), // 🔥 const
+                prefixIcon: const Icon(Icons.attach_money), 
               ),
             ),
-            const SizedBox(height: 15), // 🔥 const
+            const SizedBox(height: 15), 
 
             InkWell(
               onTap: () async {
@@ -606,23 +606,23 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
                 decoration: InputDecoration(
                   labelText: "วันที่",
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  prefixIcon: const Icon(Icons.calendar_today), // 🔥 const
+                  prefixIcon: const Icon(Icons.calendar_today), 
                 ),
                 child: Text(DateFormat('yyyy-MM-dd').format(_date)),
               ),
             ),
-            const SizedBox(height: 15), // 🔥 const
+            const SizedBox(height: 15), 
 
             TextField(
               controller: _noteController,
               decoration: InputDecoration(
                 labelText: "บันทึกช่วยจำ (ถ้ามี)",
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                prefixIcon: const Icon(Icons.note_alt_outlined), // 🔥 const
+                prefixIcon: const Icon(Icons.note_alt_outlined), 
               ),
             ),
             
-            const SizedBox(height: 25), // 🔥 const
+            const SizedBox(height: 25), 
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -644,7 +644,7 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
                   
                   if (context.mounted) Navigator.pop(context);
                 },
-                child: const Text("บันทึกข้อมูล", style: TextStyle(fontSize: 18, color: Colors.white)), // 🔥 const
+                child: const Text("บันทึกข้อมูล", style: TextStyle(fontSize: 18, color: Colors.white)), 
               ),
             ),
           ],
@@ -659,7 +659,7 @@ class _AddTransactionFormState extends State<AddTransactionForm> {
       child: GestureDetector(
         onTap: () => setState(() { _type = type; _loadCategories(); }),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12), // 🔥 const
+          padding: const EdgeInsets.symmetric(vertical: 12), 
           decoration: BoxDecoration(
             color: isSelected ? Colors.white : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
