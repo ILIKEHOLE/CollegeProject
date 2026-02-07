@@ -1,0 +1,45 @@
+name: flutter_application_1
+description: A new Flutter project.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  
+  sqflite: ^2.3.0
+  path: ^1.9.0
+  intl: ^0.19.0
+  fl_chart: ^0.66.0
+  sqflite_common_ffi: ^2.3.7+1
+
+  table_calendar: ^3.1.0
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter:
+  uses-material-design: true
+
+  fonts:
+    - family: Itim  # ตั้งชื่อฟอนต์ที่จะใช้เรียกในโค้ด
+      fonts:
+        - asset: assets/fonts/Itim-Regular.ttf
+          weight: 700
+  
+  assets:
+    - assets/icons/
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon.png" # iconไอ้น่อนจูออน
+  min_sdk_android: 21
