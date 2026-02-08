@@ -23,7 +23,6 @@ void main() async {
 
   await initializeDateFormatting('th', null);
 
-  // โหลดค่า Config จาก Database
   try {
     bool isDark = await DatabaseHelper.instance.getConfig('isDark');
     themeNotifier.value = isDark ? ThemeMode.dark : ThemeMode.light;
@@ -83,7 +82,6 @@ void main() async {
   );
 }
 
-// Widget Helper เพื่อฟังค่า ValueNotifier หลายตัวพร้อมกัน
 class MultiValueListenableBuilder extends StatelessWidget {
   final ValueNotifier<ThemeMode> themeNotifier;
   final ValueNotifier<bool> showAmountNotifier;
@@ -128,9 +126,20 @@ class DatabaseHelper {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-    final db = await openDatabase(path, version: 1, onCreate: _createDB);
+    final db = await openDatabase(path, version: 2, onCreate: _createDB, onUpgrade: _onUpgrade);
     await db.execute("CREATE TABLE IF NOT EXISTS config (key TEXT PRIMARY KEY, value TEXT)");
     return db;
+  }
+
+  // Handle upgrade for users who already have the app (adds icon column)
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      try {
+        await db.execute("ALTER TABLE categories ADD COLUMN icon TEXT");
+      } catch (e) {
+        // Ignore if column already exists
+      }
+    }
   }
 
   Future _createDB(Database db, int version) async {
@@ -149,25 +158,38 @@ class DatabaseHelper {
       CREATE TABLE categories (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         type TEXT,
-        name TEXT
+        name TEXT,
+        icon TEXT
       )
     ''');
     await _insertDefaultCategories(db);
   }
 
   Future<void> _insertDefaultCategories(Database db) async {
-    List<String> income = ['เงินเดือน', 'โบนัส', 'ขายของ', 'ดอกเบี้ย'];
-    List<String> expense = ['ค่าอาหาร', 'ค่าเดินทาง', 'ค่าน้ำค่าไฟ', 'ค่าเช่าห้อง', 'ช้อปปิ้ง'];
+    // Default categories with Emojis
+    Map<String, String> income = {
+      'เงินเดือน': '💰', 
+      'โบนัส': '🎁', 
+      'ขายของ': '🛍️', 
+      'ดอกเบี้ย': '📈'
+    };
+    Map<String, String> expense = {
+      'ค่าอาหาร': '🍔', 
+      'ค่าเดินทาง': '🚗', 
+      'ค่าน้ำค่าไฟ': '💡', 
+      'ค่าเช่าห้อง': '🏠', 
+      'ช้อปปิ้ง': '👗'
+    };
 
-    for (var cat in income) {
-      await db.insert('categories', {'type': 'รายรับ', 'name': cat});
-    }
-    for (var cat in expense) {
-      await db.insert('categories', {'type': 'รายจ่าย', 'name': cat});
-    }
+    income.forEach((name, icon) async {
+      await db.insert('categories', {'type': 'รายรับ', 'name': name, 'icon': icon});
+    });
+    
+    expense.forEach((name, icon) async {
+      await db.insert('categories', {'type': 'รายจ่าย', 'name': name, 'icon': icon});
+    });
   }
 
-  // --- จัดการ Config ---
   Future<void> setConfig(String key, bool value) async {
     final db = await instance.database;
     await db.insert(
@@ -203,11 +225,12 @@ class DatabaseHelper {
     return await db.delete('transactions', where: 'id = ?', whereArgs: [id]);
   }
 
-  Future<int> addCategory(String type, String name) async {
+  // Updated to accept Icon
+  Future<int> addCategory(String type, String name, String icon) async {
     final db = await instance.database;
     final exist = await db.query('categories', where: 'type = ? AND name = ?', whereArgs: [type, name]);
     if (exist.isEmpty) {
-      return await db.insert('categories', {'type': type, 'name': name});
+      return await db.insert('categories', {'type': type, 'name': name, 'icon': icon});
     }
     return 0;
   }
@@ -220,6 +243,17 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getCategoriesWithId(String type) async {
     final db = await instance.database;
     return await db.query('categories', where: 'type = ?', whereArgs: [type]);
+  }
+
+  // Helper to map Category Name -> Emoji
+  Future<Map<String, String>> getCategoryEmojiMap() async {
+    final db = await instance.database;
+    final result = await db.query('categories');
+    Map<String, String> map = {};
+    for (var row in result) {
+      map[row['name'] as String] = (row['icon'] as String?) ?? '⚪';
+    }
+    return map;
   }
 
   Future<List<Map<String, dynamic>>> getTransactionsByMonth(int month, int year) async {
@@ -276,6 +310,7 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with TickerProvid
 
   List<Map<String, dynamic>> _transactions = [];
   List<Map<String, dynamic>> _allHistory = [];
+  Map<String, String> _categoryIconMap = {}; // เก็บ Map ชื่อ -> ไอคอน
   
   double _monthlyIncome = 0;
   double _monthlyExpense = 0;
@@ -296,6 +331,8 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with TickerProvid
   void _refreshData() async {
     final data = await DatabaseHelper.instance.getTransactionsByMonth(_focusedDay.month, _focusedDay.year);
     final allData = await DatabaseHelper.instance.getAllTransactions();
+    // โหลด Emoji Map
+    final iconMap = await DatabaseHelper.instance.getCategoryEmojiMap();
 
     double income = 0;
     double expense = 0;
@@ -312,6 +349,7 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with TickerProvid
     setState(() {
       _transactions = data;
       _allHistory = allData;
+      _categoryIconMap = iconMap;
       _monthlyIncome = income;
       _monthlyExpense = expense;
       _allTimeBalance = totalBalance;
@@ -352,7 +390,12 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with TickerProvid
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.only(left: 20, right: 20, bottom: 25, top: 20),
+          padding: EdgeInsets.only(
+            left: 20, 
+            right: 20, 
+            bottom: 25, 
+            top: MediaQuery.of(context).padding.top + 20
+          ),
           decoration: const BoxDecoration(
             color: Colors.indigo,
             borderRadius: BorderRadius.only(
@@ -463,7 +506,7 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with TickerProvid
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const CategoryManagementScreen()),
-                ),
+                ).then((_) => _refreshData()), // Refresh data after returning
               ),
             ),
           ),
@@ -496,7 +539,6 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with TickerProvid
           ),
           const SizedBox(height: 15),
 
-          // สวิตช์เปิด/ปิด การแสดงยอดเงินในกราฟ
           FadeInAnimation(
             delay: 3,
             child: Card(
@@ -646,7 +688,6 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with TickerProvid
     double dailyIncome = 0;
     double dailyExpense = 0;
     
-    // กรองข้อมูลเฉพาะวันที่เลือก
     List<Map<String, dynamic>> dailyTransactions = _transactions.where((t) {
       DateTime tDate = DateTime.parse(t['date']);
       return isSameDay(tDate, _selectedDay);
@@ -666,7 +707,7 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with TickerProvid
         child: Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: Theme.of(context).cardColor, borderRadius: BorderRadius.circular(25), boxShadow: [BoxShadow(color: Colors.grey.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 5))]), child: Column(children: [Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text("ค่าใช้จ่ายรายวัน", style: TextStyle(color: Colors.grey[600], fontSize: 14)), Text(DateFormat('d MMM', 'th').format(_selectedDay), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo))]), const SizedBox(height: 15), _buildSummaryRow("รายจ่ายวันนี้", "- ${dailyExpense.toStringAsFixed(0)} บาท", Colors.red), const SizedBox(height: 8), _buildSummaryRow("รายรับวันนี้", "+ ${dailyIncome.toStringAsFixed(0)} บาท", Colors.green), const SizedBox(height: 8), _buildSummaryRow("โอนเงินวันนี้", "0 บาท", Colors.grey), const Divider(height: 25), _buildSummaryRow("คงเหลือสุทธิ", "${(dailyIncome - dailyExpense).toStringAsFixed(0)} บาท", Theme.of(context).textTheme.bodyMedium!.color ?? Colors.black, isBold: true)]))),
       ),
       const SizedBox(height: 20),
-      // กราฟวงกลมประจำวัน
+      
       FadeInAnimation(
         delay: 2,
         child: Container(
@@ -745,6 +786,9 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with TickerProvid
                     ),
                     ...dailyList.map((item) {
                       final isIncome = item['type'] == 'รายรับ';
+                      // หาไอคอนจากชื่อหมวดหมู่
+                      String icon = _categoryIconMap[item['category']] ?? '⚪';
+
                       return Dismissible(
                         key: Key(item['id'].toString()),
                         direction: DismissDirection.endToStart,
@@ -785,14 +829,15 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with TickerProvid
                           ),
                           child: Row(
                             children: [
-                              CircleAvatar(
-                                backgroundColor: isIncome ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
-                                radius: 20,
-                                child: Icon(
-                                  isIncome ? Icons.attach_money : Icons.shopping_bag_outlined,
-                                  color: isIncome ? Colors.green : Colors.orange,
-                                  size: 20,
+                              // แสดง Emoji แทน Icon เดิม
+                              Container(
+                                width: 40, height: 40,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: isIncome ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
+                                  shape: BoxShape.circle,
                                 ),
+                                child: Text(icon, style: const TextStyle(fontSize: 20)),
                               ),
                               const SizedBox(width: 15),
                               Expanded(
@@ -1094,7 +1139,6 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with TickerProvid
     );
   }
 
-  // รองรับการแสดงยอดเงินตามตัวเลือกในเมนู
   Widget _buildPieChartSection(String type, {List<Map<String, dynamic>>? sourceData}) {
     List<Map<String, dynamic>> targetData = sourceData ?? _transactions;
     List<Map<String, dynamic>> filteredData = targetData.where((i) => i['type'] == type).toList();
@@ -1114,31 +1158,33 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with TickerProvid
       totalAmount += item['amount'];
     }
 
+    var sortedKeys = dataMap.keys.toList()..sort((a, b) => dataMap[b]!.compareTo(dataMap[a]!));
+
     return ValueListenableBuilder<bool>(
       valueListenable: showAmountNotifier,
       builder: (context, showAmount, child) {
         return Column(
           children: [
             SizedBox(
-              height: 220,
+              height: 220, 
               child: PieChart(
                 PieChartData(
-                  sections: dataMap.entries.map((e) {
-                    final isIncome = type == 'รายรับ';
-                    final baseColor = isIncome ? Colors.green : Colors.orange;
-                    final colorIndex = dataMap.keys.toList().indexOf(e.key);
+                  sections: sortedKeys.map((key) {
+                    final value = dataMap[key]!;
+                    final baseColor = type == 'รายรับ' ? Colors.green : Colors.orange;
+                    final colorIndex = sortedKeys.indexOf(key); 
                     
-                    String title = '${e.key}\n${(e.value / totalAmount * 100).toStringAsFixed(0)}%';
-                    if (showAmount) {
-                      title += '\n฿${e.value.toStringAsFixed(0)}';
-                    }
+                    String title = '${(value / totalAmount * 100).toStringAsFixed(0)}%';
+                    // แสดง Emoji ใน PieChart ถ้ามี
+                    String icon = _categoryIconMap[key] ?? '';
+                    if (icon.isNotEmpty) title = '$icon $title';
 
                     return PieChartSectionData(
                       color: baseColor.withValues(alpha: (1.0 - (colorIndex * 0.1)).clamp(0.2, 1.0)),
-                      value: e.value,
+                      value: value,
                       title: title,
-                      radius: 75,
-                      titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                      radius: 75, 
+                      titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white, shadows: [Shadow(color: Colors.black, blurRadius: 2)]),
                     );
                   }).toList(),
                   centerSpaceRadius: 40,
@@ -1146,6 +1192,49 @@ class _ExpenseTrackerAppState extends State<ExpenseTrackerApp> with TickerProvid
                 ),
               ),
             ),
+            const SizedBox(height: 20),
+            
+            // แถบเปอร์เซ็นต์แนวนอน
+            ...sortedKeys.map((key) {
+              final value = dataMap[key]!;
+              final percentage = value / totalAmount;
+              final baseColor = type == 'รายรับ' ? Colors.green : Colors.orange;
+              final colorIndex = sortedKeys.indexOf(key);
+              final color = baseColor.withValues(alpha: (1.0 - (colorIndex * 0.1)).clamp(0.2, 1.0));
+              final icon = _categoryIconMap[key] ?? '⚪'; // ดึง Emoji
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12, left: 10, right: 10),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        // แสดง Emoji แทนจุดสี
+                        SizedBox(width: 24, child: Text(icon, style: const TextStyle(fontSize: 18), textAlign: TextAlign.center)),
+                        const SizedBox(width: 8),
+                        Text(key, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        const Spacer(),
+                        Text("${(percentage * 100).toStringAsFixed(1)}%", style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                        if(showAmount) ...[
+                          const SizedBox(width: 8),
+                          Text("฿${value.toStringAsFixed(0)}", style: const TextStyle(fontWeight: FontWeight.bold)),
+                        ]
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: percentage,
+                        backgroundColor: color.withValues(alpha: 0.15),
+                        color: color,
+                        minHeight: 8,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
           ],
         );
       },
@@ -1264,21 +1353,36 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
 
   void _showAddCategoryDialog() {
     final TextEditingController nameController = TextEditingController();
+    final TextEditingController emojiController = TextEditingController(); // ช่องใส่ Emoji
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text("เพิ่มหมวดหมู่ ($_currentType)"),
-        content: TextField(
-          controller: nameController,
-          decoration: const InputDecoration(labelText: "ชื่อหมวดหมู่", border: OutlineInputBorder()),
-          autofocus: true,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: "ชื่อหมวดหมู่", border: OutlineInputBorder()),
+              autofocus: true,
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: emojiController,
+              decoration: const InputDecoration(labelText: "อีโมจิ (เช่น 🍔)", border: OutlineInputBorder(), hintText: "ใส่อีโมจิ 1 ตัว"),
+              maxLength: 2, 
+            ),
+          ],
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("ยกเลิก")),
           ElevatedButton(
             onPressed: () async {
               if (nameController.text.isNotEmpty) {
-                await DatabaseHelper.instance.addCategory(_currentType, nameController.text);
+                // ถ้าไม่ใส่ Emoji ให้ใช้ค่า Default
+                String icon = emojiController.text.isNotEmpty ? emojiController.text : '⚪';
+                await DatabaseHelper.instance.addCategory(_currentType, nameController.text, icon);
                 if (context.mounted) Navigator.pop(ctx);
                 _loadCategories();
               }
@@ -1334,6 +1438,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
                           : (i == _categories.length - 1 ? const BorderRadius.vertical(bottom: Radius.circular(12)) : null),
                     ),
                     child: ListTile(
+                      leading: Text(cat['icon'] ?? '⚪', style: const TextStyle(fontSize: 24)), // แสดง Emoji
                       title: Text(cat['name'], style: const TextStyle(fontWeight: FontWeight.w500)),
                       trailing: IconButton(
                         icon: const Icon(Icons.delete_outline, color: Colors.red),
@@ -1447,7 +1552,6 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     }
 
     setState(() {
-      // ตัด .0 ทิ้งถ้าเป็นจำนวนเต็ม
       if (_output.contains(".") && double.tryParse(_output) != null) {
         double temp = double.parse(_output);
         if (temp % 1 == 0) {
@@ -1559,7 +1663,6 @@ class AboutScreen extends StatelessWidget {
           children: [
             const SizedBox(height: 20),
             
-            // ส่วนแสดงโลโก้แอป
             Container(
               width: 120, 
               height: 120,
@@ -1597,17 +1700,14 @@ class AboutScreen extends StatelessWidget {
                 color: Colors.grey.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
-              // [อัปเดต] เวอร์ชันใหม่
-              child: const Text("เวอร์ชัน 3.1.3", style: TextStyle(fontSize: 12, color: Colors.grey)),
+              child: const Text("เวอร์ชัน 3.2.0", style: TextStyle(fontSize: 12, color: Colors.grey)),
             ),
             const SizedBox(height: 30),
             
-            // Link Menus
             _buildInfoTile(context, "ผู้จัดทำ: นายศิวพงษ์ และ นายทรงพล"), 
             
             const SizedBox(height: 30),
             
-            // What's New
             Align(
               alignment: Alignment.centerLeft,
               child: Text("มีอะไรใหม่!!!!!!!!!!!!!", style: TextStyle(color: Colors.grey[600], fontSize: 14)),
@@ -1623,33 +1723,30 @@ class AboutScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: const [
-                  // [เพิ่ม] รายการอัปเดตล่าสุด
-                  Text("[2026-02-06] ล่าสุด (v3.1.3)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text("[2026-02-08] ล่าสุด (v3.2.0)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   SizedBox(height: 10),
-                  Text("- เพิ่ม: ตัวเลือกแสดงยอดเงินในกราฟ (เปิดได้ในเมนู)"),
+                  Text("- ใหม่: เพิ่ม Emoji ให้กับหมวดหมู่ได้"),
+                  Text("- ใหม่: แสดง Emoji ในกราฟและรายการสรุป"),
+                  Text("- ปรับปรุง: แก้ไข Layout ให้รองรับแถบสถานะด้านบน"),
+                  SizedBox(height: 20),
+
+                  Text("[2026-02-06] (v3.1.4)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  SizedBox(height: 10),
+                  Text("- ปรับปรุง: เพิ่มแถบเปอร์เซ็นต์แนวนอนใต้กราฟ"),
+                  Text("- ปรับปรุง: เพิ่มตัวเลือกแสดงยอดเงิน (เปิดได้ในเมนู)"),
+                  SizedBox(height: 20),
+
+                  Text("[2026-01-29] (v3.1.2)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  SizedBox(height: 10),
                   Text("- เพิ่ม: กราฟวงกลมแสดงสรุปรายรับ-รายจ่ายรายวัน"),
                   SizedBox(height: 20),
 
-                  // ของเก่าเก็บไว้
                   Text("[2026-01-28] (v3.1.1)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   SizedBox(height: 10),
                   Text("- เพิ่ม: เครื่องคิดเลขในเมนู"),
                   Text("- ปรับปรุง: เปลี่ยนปุ่มเพิ่มรายการกลับเป็นไอคอน +"),
                   Text("- ปรับปรุง: ปิดการเลื่อนสไลด์ที่ปฏิทิน"),
                   Text("- ปรับปรุง: เพิ่มความเร็วอนิเมชั่นให้ลื่นไหลขึ้น"),
-                  SizedBox(height: 20),
-
-                  Text("[2026-01-21]", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  SizedBox(height: 10),
-                  Text("- เพิ่ม: ระบบจัดการหมวดหมู่ (เพิ่ม/ลบ)"),
-                  Text("- เพิ่ม: ระบบเปลี่ยนธีม (Light/Dark Mode)"),
-                  Text("- เพิ่ม: ระบบล้างข้อมูล (Factory Reset)"),
-                  Text("- เพิ่ม: ระบบดูรายพร้อมสรุปยอดรายรับ-รายจ่ายของแต่ละวัน"),
-                  Text("- เพิ่ม: ระบบปฏิทินแสดงภาพรวมรายรับ-รายจ่ายในแต่ละวัน"),
-                  Text("- เพิ่ม: เปลี่ยนฟ้อนต์หลักเป็น itim"),
-                  Text("- เพิ่ม: เปลี่ยนหน้าประวัติรายการเป็นแบบ Dismissible ลบรายการด้วยการปัดซ้าย ดูสะอาดตาและใช้งานง่ายขึ้น"),
-                  Text("- เพิ่ม: navigator ใหม่สำหรับการนำทางภายในแอป"),
-                  Text("- เพิ่ม: หน้าข้อมูลเพิ่มเติมและผู้จัดทำ"),
                 ],
               ),
             ),
